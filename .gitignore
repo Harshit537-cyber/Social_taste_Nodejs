@@ -1,0 +1,17 @@
+# Dependency folder (ye bahut bada hota hai, isliye ignore karte hain)
+node_modules/
+
+# Environment variables (isme tumhare DB aur Cloudinary ke passwords hain)
+.env
+
+# Temporary upload folder (jo multer files save kar raha hai)
+uploads/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS specific files
+.DS_Store
+Thumbs.db
