@@ -10,4 +10,8 @@ router.post('/register', upload.fields([
     { name: 'portfolio', maxCount: 6 }
 ]), userController.registerUser);
 
+
+router.post('/login', userController.loginUser);
+
+
 module.exports = router;
