@@ -1,25 +1,41 @@
 const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require('../utils/cloudinary');
-const ApiResponse = require('../utils/apiResponse');
+const { ApiResponse } = require('../utils/ApiResponse');
+const { ApiError } = require('../utils/ApiError');
+const { generateAccessToken } = require('../utils/jwt');
 
 const registerUser = async (req, res) => {
     try {
         const { fullName, email, password, dob, gender, interests } = req.body;
 
+        if ([fullName, email, password].some((field) => field?.trim() === "")) {
+            return res.status(400).json(new ApiResponse(400, null, "All fields are required"));
+        }
+
         const existedUser = await userService.findUserByEmail(email);
-        if (existedUser) return res.status(400).json(new ApiResponse(400, null, "Email already exists"));
+        if (existedUser) {
+            return res.status(400).json(new ApiResponse(400, null, "User with this email already exists"));
+        }
 
         const profilePicLocalPath = req.files?.profilePic?.[0]?.path;
-        if (!profilePicLocalPath) return res.status(400).json(new ApiResponse(400, null, "Profile pic is required"));
+        if (!profilePicLocalPath) {
+            return res.status(400).json(new ApiResponse(400, null, "Profile picture is required"));
+        }
 
-        const profilePicUrl = await uploadOnCloudinary(profilePicLocalPath);
+        const profilePicResponse = await uploadOnCloudinary(profilePicLocalPath);
+        if (!profilePicResponse) {
+            return res.status(500).json(new ApiResponse(500, null, "Error while uploading profile picture"));
+        }
 
         let portfolioUrls = [];
         if (req.files?.portfolio && req.files.portfolio.length > 0) {
-            for (const file of req.files.portfolio) {
-                const url = await uploadOnCloudinary(file.path);
-                if (url) portfolioUrls.push(url);
-            }
+            const uploadResults = await Promise.all(
+                req.files.portfolio.map(file => uploadOnCloudinary(file.path))
+            );
+            
+            portfolioUrls = uploadResults
+                .filter(result => result !== null)
+                .map(result => result.url);
         }
 
         const user = await userService.createUser({
@@ -28,43 +44,59 @@ const registerUser = async (req, res) => {
             password,
             dob,
             gender,
-            profilePic: profilePicUrl,
+            profilePic: profilePicResponse.url,
             portfolio: portfolioUrls,
-            interests: JSON.parse(interests)
+            interests: interests ? JSON.parse(interests) : []
         });
 
         const createdUser = await userService.findUserByIdWithoutPassword(user._id);
 
-        return res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
+        return res.status(201).json(
+            new ApiResponse(201, createdUser, "User registered successfully")
+        );
+
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, null, error.message));
+        return res.status(500).json(
+            new ApiResponse(500, null, error.message || "Internal Server Error")
+        );
     }
 };
-
-
 
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        if (!email || !password) return res.status(400).json(new ApiResponse(400, null, "Email and password are required"));
         
+        if (!email || !password) {
+            return res.status(400).json(new ApiResponse(400, null, "Email and password are required"));
+        }
+
         const user = await userService.findUserByEmail(email);
-        if (!user) return res.status(404).json(new ApiResponse(404, null, "User does not exist"));
+        if (!user) {
+            return res.status(404).json(new ApiResponse(404, null, "User does not exist"));
+        }
 
         const isPasswordValid = await user.isPasswordCorrect(password);
-        if (!isPasswordValid) return res.status(401).json(new ApiResponse(401, null, "Invalid credentials"));
+        if (!isPasswordValid) {
+            return res.status(401).json(new ApiResponse(401, null, "Invalid user credentials"));
+        }
 
         const accessToken = generateAccessToken(user);
         const loggedInUser = await userService.findUserByIdWithoutPassword(user._id);
+        
+        const userResponse = loggedInUser.toObject();
+        if (userResponse.dob) {
+            userResponse.dob = userResponse.dob.toISOString().split('T')[0];
+        }
 
         return res.status(200).json(
-            new ApiResponse(200, { user: loggedInUser, accessToken }, "Login successful")
+            new ApiResponse(200, { user: userResponse, accessToken }, "Login successful")
         );
+
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, null, error.message));
+        return res.status(500).json(
+            new ApiResponse(500, null, error.message || "Internal Server Error")
+        );
     }
 };
 
-
-
-module.exports = { registerUser,loginUser };
+module.exports = { registerUser, loginUser };
