@@ -33,7 +33,7 @@ const registerUser = async (req, res) => {
             interests: JSON.parse(interests)
         });
 
-        const createdUser = await userService.findUserByEmail(user.email).select("-password");
+        const createdUser = await userService.findUserByIdWithoutPassword(user._id);
 
         return res.status(201).json(new ApiResponse(201, createdUser, "User registered successfully"));
     } catch (error) {

@@ -8,4 +8,8 @@ const findUserByEmail = async (email) => {
     return await User.findOne({ email });
 };
 
-module.exports = { createUser, findUserByEmail };
+const findUserByIdWithoutPassword = async (userId) => {
+    return await User.findById(userId).select("-password");
+};
+
+module.exports = { createUser, findUserByEmail, findUserByIdWithoutPassword };
