@@ -1,6 +1,5 @@
 const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require('../utils/cloudinary');
-const { ApiResponse } = require('../utils/ApiResponse');
 const { generateAccessToken } = require('../utils/jwt');
 
 const registerUser = async (req, res) => {
@@ -9,22 +8,42 @@ const registerUser = async (req, res) => {
         const normalizedEmail = email?.trim().toLowerCase();
 
         if ([fullName, normalizedEmail, password].some((field) => !field || field.trim() === "")) {
-            return res.status(400).json(new ApiResponse(400, null, "All fields are required"));
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                data: null,
+                message: "All fields are required"
+            });
         }
 
         const existedUser = await userService.findUserByEmail(normalizedEmail);
         if (existedUser) {
-            return res.status(400).json(new ApiResponse(400, null, "User with this email already exists"));
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                data: null,
+                message: "User with this email already exists"
+            });
         }
 
         const profilePicLocalPath = req.files?.profilePic?.[0]?.path;
         if (!profilePicLocalPath) {
-            return res.status(400).json(new ApiResponse(400, null, "Profile picture is required"));
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                data: null,
+                message: "Profile picture is required"
+            });
         }
 
         const profilePicResponse = await uploadOnCloudinary(profilePicLocalPath);
         if (!profilePicResponse) {
-            return res.status(500).json(new ApiResponse(500, null, "Error while uploading profile picture"));
+            return res.status(500).json({
+                success: false,
+                statusCode: 500,
+                data: null,
+                message: "Error while uploading profile picture"
+            });
         }
 
         let portfolioUrls = [];
@@ -48,14 +67,20 @@ const registerUser = async (req, res) => {
 
         const createdUser = await userService.findUserByIdWithoutPassword(user._id);
 
-        return res.status(201).json(
-            new ApiResponse(201, createdUser, "User registered successfully")
-        );
+        return res.status(201).json({
+            success: true,
+            statusCode: 201,
+            data: createdUser,
+            message: "User registered successfully"
+        });
 
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(500, null, error.message || "Internal Server Error")
-        );
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message || "Internal Server Error"
+        });
     }
 };
 
@@ -65,17 +90,32 @@ const loginUser = async (req, res) => {
         const normalizedEmail = email?.trim().toLowerCase();
 
         if (!normalizedEmail || !password) {
-            return res.status(400).json(new ApiResponse(400, null, "Email and password are required"));
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                data: null,
+                message: "Email and password are required"
+            });
         }
 
         const user = await userService.findUserByEmail(normalizedEmail);
         if (!user) {
-            return res.status(404).json(new ApiResponse(404, null, "User does not exist"));
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: null,
+                message: "User does not exist"
+            });
         }
 
         const isPasswordValid = await user.isPasswordCorrect(password);
         if (!isPasswordValid) {
-            return res.status(401).json(new ApiResponse(401, null, "Invalid user credentials"));
+            return res.status(401).json({
+                success: false,
+                statusCode: 401,
+                data: null,
+                message: "Invalid user credentials"
+            });
         }
 
         const accessToken = generateAccessToken(user);
@@ -86,37 +126,51 @@ const loginUser = async (req, res) => {
             userResponse.dob = userResponse.dob.toISOString().split('T')[0];
         }
 
-        return res.status(200).json(
-            new ApiResponse(200, { user: userResponse, accessToken }, "Login successful")
-        );
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: { user: userResponse, accessToken },
+            message: "Login successful"
+        });
 
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(500, null, error.message || "Internal Server Error")
-        );
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message || "Internal Server Error"
+        });
     }
 };
-
 
 const getAllUsers = async (req, res) => {
     try {
         const users = await userService.findAllUsers();
 
         if (!users || users.length === 0) {
-            return res.status(404).json(
-                new ApiResponse(404, [], "No users found")
-            );
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: [],
+                message: "No users found"
+            });
         }
 
-        return res.status(200).json(
-            new ApiResponse(200, users, "Users fetched successfully")
-        );
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: users,
+            message: "Users fetched successfully"
+        });
 
     } catch (error) {
-        return res.status(500).json(
-            new ApiResponse(500, null, error.message || "Internal Server Error")
-        );
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message || "Internal Server Error"
+        });
     }
 };
 
-module.exports = { registerUser, loginUser,getAllUsers };
+module.exports = { registerUser, loginUser, getAllUsers };

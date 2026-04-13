@@ -1,5 +1,4 @@
 const User = require('../models/user.model');
-const { ApiResponse } = require('../utils/ApiResponse');
 
 const toggleFollow = async (req, res) => {
     try {
@@ -7,17 +6,26 @@ const toggleFollow = async (req, res) => {
         const userId = req.user._id;
 
         if (userId.toString() === targetUserId) {
-            return res.status(400).json(new ApiResponse(400, null, "You cannot follow yourself"));
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                data: null,
+                message: "You cannot follow yourself"
+            });
         }
 
         const targetUser = await User.findById(targetUserId);
         const currentUser = await User.findById(userId);
 
         if (!targetUser) {
-            return res.status(404).json(new ApiResponse(404, null, "User not found"));
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: null,
+                message: "User not found"
+            });
         }
 
-      
         if (!currentUser.following) currentUser.following = [];
         if (!targetUser.followers) targetUser.followers = [];
 
@@ -34,11 +42,19 @@ const toggleFollow = async (req, res) => {
         await currentUser.save();
         await targetUser.save();
 
-        return res.status(200).json(
-            new ApiResponse(200, null, isFollowing ? "Unfollowed successfully" : "Followed successfully")
-        );
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: null,
+            message: isFollowing ? "Unfollowed successfully" : "Followed successfully"
+        });
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, null, error.message));
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
     }
 };
 
@@ -70,9 +86,19 @@ const getSuggestions = async (req, res) => {
             { $sort: { mutualFriendsCount: -1 } }
         ]);
 
-        return res.status(200).json(new ApiResponse(200, suggestions, "Suggestions fetched successfully"));
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: suggestions,
+            message: "Suggestions fetched successfully"
+        });
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, null, error.message));
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
     }
 };
 
@@ -81,12 +107,27 @@ const getFollowingList = async (req, res) => {
         const user = await User.findById(req.user._id).populate("following", "fullName profilePic email");
         
         if (!user) {
-            return res.status(404).json(new ApiResponse(404, null, "User not found"));
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: null,
+                message: "User not found"
+            });
         }
 
-        return res.status(200).json(new ApiResponse(200, user.following || [], "Friends list fetched successfully"));
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: user.following || [],
+            message: "Friends list fetched successfully"
+        });
     } catch (error) {
-        return res.status(500).json(new ApiResponse(500, null, error.message));
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
     }
 };
 
