@@ -1,18 +1,18 @@
 const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require('../utils/cloudinary');
 const { ApiResponse } = require('../utils/ApiResponse');
-const { ApiError } = require('../utils/ApiError');
 const { generateAccessToken } = require('../utils/jwt');
 
 const registerUser = async (req, res) => {
     try {
         const { fullName, email, password, dob, gender, interests } = req.body;
+        const normalizedEmail = email?.trim().toLowerCase();
 
-        if ([fullName, email, password].some((field) => field?.trim() === "")) {
+        if ([fullName, normalizedEmail, password].some((field) => !field || field.trim() === "")) {
             return res.status(400).json(new ApiResponse(400, null, "All fields are required"));
         }
 
-        const existedUser = await userService.findUserByEmail(email);
+        const existedUser = await userService.findUserByEmail(normalizedEmail);
         if (existedUser) {
             return res.status(400).json(new ApiResponse(400, null, "User with this email already exists"));
         }
@@ -28,19 +28,16 @@ const registerUser = async (req, res) => {
         }
 
         let portfolioUrls = [];
-        if (req.files?.portfolio && req.files.portfolio.length > 0) {
+        if (req.files?.portfolio?.length > 0) {
             const uploadResults = await Promise.all(
                 req.files.portfolio.map(file => uploadOnCloudinary(file.path))
             );
-            
-            portfolioUrls = uploadResults
-                .filter(result => result !== null)
-                .map(result => result.url);
+            portfolioUrls = uploadResults.filter(res => res).map(res => res.url);
         }
 
         const user = await userService.createUser({
             fullName,
-            email,
+            email: normalizedEmail,
             password,
             dob,
             gender,
@@ -65,12 +62,13 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
-        
-        if (!email || !password) {
+        const normalizedEmail = email?.trim().toLowerCase();
+
+        if (!normalizedEmail || !password) {
             return res.status(400).json(new ApiResponse(400, null, "Email and password are required"));
         }
 
-        const user = await userService.findUserByEmail(email);
+        const user = await userService.findUserByEmail(normalizedEmail);
         if (!user) {
             return res.status(404).json(new ApiResponse(404, null, "User does not exist"));
         }
@@ -99,4 +97,26 @@ const loginUser = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser };
+
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await userService.findAllUsers();
+
+        if (!users || users.length === 0) {
+            return res.status(404).json(
+                new ApiResponse(404, [], "No users found")
+            );
+        }
+
+        return res.status(200).json(
+            new ApiResponse(200, users, "Users fetched successfully")
+        );
+
+    } catch (error) {
+        return res.status(500).json(
+            new ApiResponse(500, null, error.message || "Internal Server Error")
+        );
+    }
+};
+
+module.exports = { registerUser, loginUser,getAllUsers };

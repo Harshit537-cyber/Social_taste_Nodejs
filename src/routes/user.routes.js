@@ -15,6 +15,8 @@ router.post('/register', upload.fields([
 
 router.post('/login', userController.loginUser);
 
+router.route("/all-users").get(userController.getAllUsers);
+
 // Protected Routes (Inke liye login hona zaroori hai)
 router.use(verifyJWT); // 2. Ye line add karein, iske niche wale sare routes secure ho jayenge
 
