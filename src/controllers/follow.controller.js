@@ -119,7 +119,7 @@ const getFollowingList = async (req, res) => {
             success: true,
             statusCode: 200,
             data: user.following || [],
-            message: "Friends list fetched successfully"
+            message: "Friends list fetchedd successfully"
         });
     } catch (error) {
         return res.status(500).json({
