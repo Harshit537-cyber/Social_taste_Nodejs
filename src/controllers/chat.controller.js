@@ -1,5 +1,5 @@
 const Message = require('../models/message.model');
-const {ApiResponse} = require('../utils/ApiResponse');
+const { ApiResponse } = require('../utils/ApiResponse');
 
 const {uploadOnCloudinary} = require('../utils/cloudinary');
 
