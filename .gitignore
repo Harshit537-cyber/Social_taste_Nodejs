@@ -6,7 +6,6 @@ node_modules/
 
 # Temporary upload folder (jo multer files save kar raha hai)
 uploads/
-
 # Logs
 npm-debug.log*
 yarn-debug.log*
@@ -15,3 +14,6 @@ yarn-error.log*
 # OS specific files
 .DS_Store
 Thumbs.db
+
+src/public/temp/*
+!src/public/temp/.gitkeep
