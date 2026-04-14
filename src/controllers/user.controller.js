@@ -118,6 +118,9 @@ const loginUser = async (req, res) => {
             });
         }
 
+        user.isOnline = true;
+        await user.save({ validateBeforeSave: false });
+
         const accessToken = generateAccessToken(user);
         const loggedInUser = await userService.findUserByIdWithoutPassword(user._id);
         
@@ -139,6 +142,30 @@ const loginUser = async (req, res) => {
             statusCode: 500,
             data: null,
             message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+const logoutUser = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        await User.findByIdAndUpdate(userId, {
+            $set: { isOnline: false }
+        });
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: null,
+            message: "Logout successful"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
         });
     }
 };

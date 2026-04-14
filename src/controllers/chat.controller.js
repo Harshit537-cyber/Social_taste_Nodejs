@@ -160,13 +160,19 @@ const getRecentChats = async (req, res) => {
 
 const getOnlineUsers = async (req, res) => {
     try {
-        const onlineUsers = await User.find({ isOnline: true }, 'fullName profilePic');
+        const userId = req.user._id;
+        const user = await User.findById(userId);
+
+        const onlineUsers = await User.find({
+            _id: { $in: user.following },
+            isOnline: true
+        }, 'fullName profilePic isOnline');
 
         return res.status(200).json({
             success: true,
             statusCode: 200,
             data: onlineUsers,
-            message: "Online users fetched successfully"
+            message: "Online users fetched"
         });
     } catch (error) {
         return res.status(500).json({
