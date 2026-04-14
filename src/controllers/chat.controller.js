@@ -51,7 +51,7 @@ const getChatHistory = async (req, res) => {
         const { friendId } = req.params;
         const userId = req.user._id;
 
-        // 1. Saare unread messages ko read mark karein
+       
         await Message.updateMany(
             { 
                 sender: friendId, 
@@ -63,7 +63,7 @@ const getChatHistory = async (req, res) => {
             }
         );
 
-        // 2. Chat history fetch karein
+       
         const messages = await Message.find({
             $or: [
                 { sender: userId, receiver: friendId },
@@ -86,5 +86,7 @@ const getChatHistory = async (req, res) => {
         });
     }
 };
+
+
 
 module.exports = { sendMessage, getChatHistory };

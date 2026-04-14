@@ -16,9 +16,10 @@ router.post('/register', upload.fields([
 router.post('/login', userController.loginUser);
 
 router.route("/all-users").get(userController.getAllUsers);
+router.route("/user/:id").get(userController.getUserById);
 
-// Protected Routes (Inke liye login hona zaroori hai)
-router.use(verifyJWT); // 2. Ye line add karein, iske niche wale sare routes secure ho jayenge
+
+router.use(verifyJWT); 
 
 router.route("/chat/send").post(upload.single('media'), sendMessage);
 router.route("/chat/history/:friendId").get(getChatHistory);

@@ -171,6 +171,44 @@ const getAllUsers = async (req, res) => {
             message: error.message || "Internal Server Error"
         });
     }
+
 };
 
-module.exports = { registerUser, loginUser, getAllUsers };
+
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await userService.findUserByIdWithoutPassword(id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: null,
+                message: "User not found"
+            });
+        }
+
+        const userResponse = user.toObject();
+        if (userResponse.dob) {
+            userResponse.dob = userResponse.dob.toISOString().split('T')[0];
+        }
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: userResponse,
+            message: "User details fetched successfully"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message || "Internal Server Error"
+        });
+    }
+}
+
+module.exports = { registerUser, loginUser, getAllUsers ,getUserById };
