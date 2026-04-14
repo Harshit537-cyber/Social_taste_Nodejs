@@ -1,4 +1,5 @@
 const Message = require('../models/message.model');
+const User = require('../models/user.model');
 const { uploadOnCloudinary } = require('../utils/cloudinary');
 
 const sendMessage = async (req, res) => {
@@ -44,26 +45,24 @@ const sendMessage = async (req, res) => {
             message: error.message
         });
     }
-}
+};
 
 const getChatHistory = async (req, res) => {
     try {
         const { friendId } = req.params;
         const userId = req.user._id;
 
-       
         await Message.updateMany(
-            { 
-                sender: friendId, 
-                receiver: userId, 
-                isRead: false 
+            {
+                sender: friendId,
+                receiver: userId,
+                isRead: false
             },
-            { 
-                $set: { isRead: true } 
+            {
+                $set: { isRead: true }
             }
         );
 
-       
         const messages = await Message.find({
             $or: [
                 { sender: userId, receiver: friendId },
@@ -87,6 +86,96 @@ const getChatHistory = async (req, res) => {
     }
 };
 
+const getRecentChats = async (req, res) => {
+    try {
+        const userId = req.user._id;
 
+        const distinctChatters = await Message.aggregate([
+            {
+                $match: {
+                    $or: [{ sender: userId }, { receiver: userId }]
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        $cond: {
+                            if: { $eq: ['$sender', userId] },
+                            then: '$receiver',
+                            else: '$sender'
+                        }
+                    },
+                    lastMessage: { $last: '$$ROOT' },
+                    unreadCount: {
+                        $sum: {
+                            $cond: [{ $and: [{ $eq: ['$receiver', userId] }, { $eq: ['$isRead', false] }] }, 1, 0]
+                        }
+                    }
+                }
+            },
+            {
+                $sort: { "lastMessage.createdAt": -1 }
+            },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'chatterInfo'
+                }
+            },
+            {
+                $unwind: '$chatterInfo'
+            },
+            {
+                $project: {
+                    _id: 0,
+                    friendId: '$_id',
+                    lastMessageContent: '$lastMessage.content',
+                    lastMessageType: '$lastMessage.messageType',
+                    lastMessageTimestamp: '$lastMessage.createdAt',
+                    unreadCount: '$unreadCount',
+                    friendName: '$chatterInfo.fullName',
+                    friendProfilePic: '$chatterInfo.profilePic',
+                    friendIsOnline: '$chatterInfo.isOnline'
+                }
+            }
+        ]);
 
-module.exports = { sendMessage, getChatHistory };
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: distinctChatters,
+            message: "Recent chats fetched successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
+    }
+};
+
+const getOnlineUsers = async (req, res) => {
+    try {
+        const onlineUsers = await User.find({ isOnline: true }, 'fullName profilePic');
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: onlineUsers,
+            message: "Online users fetched successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
+    }
+};
+
+module.exports = { sendMessage, getChatHistory, getRecentChats, getOnlineUsers };

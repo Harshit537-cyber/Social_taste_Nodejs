@@ -4,7 +4,7 @@ const messageSchema = new mongoose.Schema({
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     receiver: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     messageType: { type: String, enum: ['text', 'image', 'video'], default: 'text' },
-    content: { type: String, required: true }, // Text message ya media ka URL
+    content: { type: String, required: true },
     isRead: { type: Boolean, default: false }
 }, { timestamps: true });
 
