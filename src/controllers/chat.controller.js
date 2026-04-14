@@ -178,4 +178,45 @@ const getOnlineUsers = async (req, res) => {
     }
 };
 
-module.exports = { sendMessage, getChatHistory, getRecentChats, getOnlineUsers };
+
+const getUnreadMessageCount = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const unreadCountAggregate = await Message.aggregate([
+            {
+                $match: {
+                    receiver: userId,
+                    isRead: false
+                }
+            },
+            {
+                $group: {
+                    _id: "$sender" // Group by sender to count distinct unread message sources
+                }
+            },
+            {
+                $count: "distinctSendersWithUnread"
+            }
+        ]);
+
+        const count = unreadCountAggregate.length > 0 ? unreadCountAggregate[0].distinctSendersWithUnread : 0;
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: { count },
+            message: "Unread message count fetched successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            data: null,
+            message: error.message
+        });
+    }
+};
+
+
+module.exports = { sendMessage, getChatHistory, getRecentChats, getOnlineUsers, getUnreadMessageCount  };

@@ -20,14 +20,17 @@ router.post('/login', userController.loginUser);
 router.use(verifyJWT);
 
 // User Profile Routes (Auth Required)
+
 router.get("/all-users", userController.getAllUsers);
 router.get("/user/:id", userController.getUserById);
+
 
 // Chat Routes (Auth Required)
 router.post("/chat/send", upload.single('media'), chatController.sendMessage);
 router.get("/chat/history/:friendId", chatController.getChatHistory);
 router.get("/chat/recent", chatController.getRecentChats);
 router.get("/chat/online-users", chatController.getOnlineUsers);
+router.get('/unread-count', chatController.getUnreadMessageCount);
 
 // Follow Routes (Auth Required)
 router.post("/follow/:targetUserId", followController.toggleFollow);
