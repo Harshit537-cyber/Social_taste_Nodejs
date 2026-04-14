@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/user.controller');
+const adminController = require('../controllers/AdminController/admin.controller');
 const chatController = require('../controllers/chat.controller'); // Renamed to message.controller as per previous conversation
 const followController = require('../controllers/follow.controller');
-const { verifyJWT } = require('../middlewares/auth.middleware');
+const { verifyJWT,isAdmin  } = require('../middlewares/auth.middleware');
 const multer = require('multer');
 
 const upload = multer({ dest: 'public/temp' }); // Changed destination to a public temporary folder
@@ -13,6 +14,11 @@ router.post('/register', upload.fields([
     { name: 'profilePic', maxCount: 1 },
     { name: 'portfolio', maxCount: 6 }
 ]), userController.registerUser);
+
+//Admin route
+
+router.post('/admin/register', adminController.registerAdmin);
+router.post('/admin/login', adminController.loginAdmin);
 
 router.post('/login', userController.loginUser);
 

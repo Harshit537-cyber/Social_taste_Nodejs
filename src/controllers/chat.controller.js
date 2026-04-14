@@ -198,7 +198,7 @@ const getUnreadMessageCount = async (req, res) => {
             },
             {
                 $group: {
-                    _id: "$sender" // Group by sender to count distinct unread message sources
+                    _id: "$sender" 
                 }
             },
             {

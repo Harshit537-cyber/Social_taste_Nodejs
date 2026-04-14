@@ -238,4 +238,6 @@ const getUserById = async (req, res) => {
     }
 }
 
+
+
 module.exports = { registerUser, loginUser, getAllUsers ,getUserById };
