@@ -206,16 +206,21 @@ const getAllUsers = async (req, res) => {
 const getUserById = async (req, res) => {
     try {
         const { id } = req.params;
+        const currentUserId = req.user._id; 
+
         const user = await userService.findUserByIdWithoutPassword(id);
 
         if (!user) {
             return res.status(404).json({
                 success: false,
                 statusCode: 404,
-                data: null,
                 message: "User not found"
             });
         }
+
+      
+        const currentUser = await User.findById(currentUserId);
+        const isBlockedByMe = currentUser.blockedUsers.includes(id);
 
         const userResponse = user.toObject();
         if (userResponse.dob) {
@@ -225,7 +230,10 @@ const getUserById = async (req, res) => {
         return res.status(200).json({
             success: true,
             statusCode: 200,
-            data: userResponse,
+            data: {
+                ...userResponse,
+                isBlockedByMe: isBlockedByMe // Ye batayega ki aapne block kiya hai ya nahi
+            },
             message: "User details fetched successfully"
         });
 
@@ -233,7 +241,6 @@ const getUserById = async (req, res) => {
         return res.status(500).json({
             success: false,
             statusCode: 500,
-            data: null,
             message: error.message || "Internal Server Error"
         });
     }
