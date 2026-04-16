@@ -1,6 +1,7 @@
 const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require('../utils/cloudinary');
 const { generateAccessToken } = require('../utils/jwt');
+const User = require('../models/user.model');
 
 const registerUser = async (req, res) => {
     try {
@@ -238,6 +239,171 @@ const getUserById = async (req, res) => {
     }
 }
 
+const updateProfile = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { fullName, dob, gender, interests } = req.body;
+        const updateData = {};
+
+        if (fullName) updateData.fullName = fullName;
+        if (dob) updateData.dob = dob;
+        if (gender) updateData.gender = gender;
+        
+        if (interests) {
+            updateData.interests = typeof interests === "string" ? JSON.parse(interests) : interests;
+        }
+
+        if (req.files?.profilePic) {
+            const response = await uploadOnCloudinary(req.files.profilePic[0].path);
+            if (response?.url) updateData.profilePic = response.url;
+        }
+
+        if (req.files?.portfolio) {
+            const uploadResults = await Promise.all(
+                req.files.portfolio.map((file) => uploadOnCloudinary(file.path))
+            );
+            updateData.portfolio = uploadResults.filter((res) => res?.url).map((res) => res.url);
+        }
+
+        const updatedUser = await userService.updateUser(userId, updateData);
+        if (!updatedUser) throw new ApiError(404, "User not found");
+
+        const userResponse = updatedUser.toObject();
+        if (userResponse.dob) {
+            userResponse.dob = userResponse.dob.toISOString().split('T')[0];
+        }
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: userResponse,
+            message: "Profile updated successfully"
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({
+            success: false,
+            statusCode: error.statusCode || 500,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
 
 
-module.exports = { registerUser, loginUser, getAllUsers ,getUserById };
+const deleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const user = await userService.findUserByIdWithoutPassword(id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found"
+            });
+        }
+
+        await userService.deleteUserById(id);
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: null,
+            message: "User deleted successfully by admin"
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+const toggleBlockUser = async (req, res) => {
+    try {
+        const { userIdToBlock } = req.params;
+        const userId = req.user._id;
+
+        if (userId.toString() === userIdToBlock) {
+            return res.status(400).json({
+                success: false,
+                statusCode: 400,
+                message: "You cannot block yourself"
+            });
+        }
+
+        const user = await User.findById(userId);
+        
+       
+        if (!user.blockedUsers) {
+            user.blockedUsers = [];
+        }
+
+        const isBlocked = user.blockedUsers.includes(userIdToBlock);
+
+        if (isBlocked) {
+            user.blockedUsers.pull(userIdToBlock);
+        } else {
+            user.blockedUsers.push(userIdToBlock);
+            
+            // Unfollow logic
+            await User.findByIdAndUpdate(userId, {
+                $pull: { following: userIdToBlock, followers: userIdToBlock }
+            });
+            await User.findByIdAndUpdate(userIdToBlock, {
+                $pull: { following: userId, followers: userId }
+            });
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            message: isBlocked ? "User unblocked successfully" : "User blocked successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            message: error.message
+        });
+    }
+};
+
+
+const getBlockedUsers = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        const user = await User.findById(userId).populate(
+            "blockedUsers", 
+            "fullName profilePic email" 
+        );
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "User not found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: user.blockedUsers || [],
+            message: "Blocked users fetched successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+
+module.exports = { registerUser,getBlockedUsers,toggleBlockUser ,loginUser, getAllUsers ,getUserById ,deleteUser,updateProfile};

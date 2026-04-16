@@ -30,6 +30,12 @@ router.use(verifyJWT);
 router.get("/all-users", userController.getAllUsers);
 router.get("/user/:id", userController.getUserById);
 
+//Update Profile
+router.patch("/update-profile", upload.fields([
+    { name: 'profilePic', maxCount: 1 },
+    { name: 'portfolio', maxCount: 6 }
+]), userController.updateProfile);
+
 
 // Chat Routes (Auth Required)
 router.post("/chat/send", upload.single('media'), chatController.sendMessage);
@@ -42,5 +48,10 @@ router.get('/unread-count', chatController.getUnreadMessageCount);
 router.post("/follow/:targetUserId", followController.toggleFollow);
 router.get("/suggestions", followController.getSuggestions);
 router.get("/friends", followController.getFollowingList);
+router.route("/block/:userIdToBlock").patch(verifyJWT, userController.toggleBlockUser);
+router.get("/blocked-list", userController.getBlockedUsers); 
+
+//Admin-Api
+router.delete("/admin/delete-user/:id", verifyJWT, isAdmin, userController.deleteUser);
 
 module.exports = router;

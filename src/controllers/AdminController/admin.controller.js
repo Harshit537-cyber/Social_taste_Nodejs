@@ -7,26 +7,28 @@ const registerAdmin = async (req, res) => {
         const { fullName, email, password } = req.body;
         const normalizedEmail = email?.trim().toLowerCase();
 
-        // 1. Validation
         if (!fullName || !normalizedEmail || !password) {
-            return res.status(400).json({ success: false, message: "Name, email and password are required" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Name, email and password are required" 
+            });
         }
 
-        // 2. Check if admin already exists
         const existedAdmin = await userService.findUserByEmail(normalizedEmail);
         if (existedAdmin) {
-            return res.status(400).json({ success: false, message: "Admin with this email already exists" });
+            return res.status(400).json({ 
+                success: false, 
+                message: "Admin with this email already exists" 
+            });
         }
 
-        // 3. Create Admin (Role explicitly set to 'admin')
-        // Note: dob and gender are required in your schema, so we provide dummy/default values if not sent
         const admin = await User.create({
             fullName,
             email: normalizedEmail,
             password,
             role: 'admin',
-            dob: new Date(), // Admin ke liye default ya req.body se le sakte hain
-            gender: 'Other'   // Schema requirement satisfy karne ke liye
+            dob: new Date(),
+            gender: 'Other'
         });
 
         const createdAdmin = await User.findById(admin._id).select("-password");
@@ -36,9 +38,11 @@ const registerAdmin = async (req, res) => {
             data: createdAdmin,
             message: "Admin registered successfully"
         });
-
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 };
 
@@ -50,12 +54,18 @@ const loginAdmin = async (req, res) => {
         const user = await userService.findUserByEmail(normalizedEmail);
 
         if (!user || user.role !== 'admin') {
-            return res.status(404).json({ success: false, message: "Admin not found or unauthorized" });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Admin not found or unauthorized" 
+            });
         }
 
         const isPasswordValid = await user.isPasswordCorrect(password);
         if (!isPasswordValid) {
-            return res.status(401).json({ success: false, message: "Invalid credentials" });
+            return res.status(401).json({ 
+                success: false, 
+                message: "Invalid credentials" 
+            });
         }
 
         const accessToken = generateAccessToken(user);
@@ -66,9 +76,11 @@ const loginAdmin = async (req, res) => {
             data: { admin: adminData, accessToken },
             message: "Admin login successful"
         });
-
     } catch (error) {
-        return res.status(500).json({ success: false, message: error.message });
+        return res.status(500).json({ 
+            success: false, 
+            message: error.message 
+        });
     }
 };
 

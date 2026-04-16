@@ -1,4 +1,5 @@
 const User = require('../models/user.model');
+const { Post } = require('../models/post.model')
 
 const createUser = async (userData) => {
     return await User.create(userData);
@@ -16,4 +17,25 @@ const findUserByIdWithoutPassword = async (userId) => {
     return await User.findById(userId).select("-password");
 };
 
-module.exports = { createUser, findUserByEmail, findUserByIdWithoutPassword,findAllUsers };
+const updateUser = async (userId, updateData) => {
+    return await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+    ).select("-password");
+};
+
+const deletePostById = async (postId) => {
+    return await Post.findByIdAndDelete(postId); 
+};
+
+const findPostById = async (postId) => {
+    return await Post.findById(postId);
+};
+
+const deleteUserById = async (userId) => {
+    return await User.findByIdAndDelete(userId);
+};
+
+
+module.exports = { createUser, findUserByEmail,deleteUserById , deletePostById,findPostById,findUserByIdWithoutPassword,findAllUsers,updateUser };

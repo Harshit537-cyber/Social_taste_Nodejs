@@ -1,4 +1,5 @@
 const { ApiError } = require("../utils/ApiError");
+const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require("../utils/cloudinary");
 const { Post } = require("../models/post.model");
 const mongoose = require("mongoose");
@@ -161,4 +162,77 @@ const addReply = async (req, res) => {
     }
 };
 
-module.exports = { createPost, getAllPosts, toggleLike, addComment, addReply };
+const deletePost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const userId = req.user._id;
+        const userRole = req.user.role; 
+
+        const post = await userService.findPostById(postId);
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "Post not found"
+            });
+        }
+
+    
+        if (post.owner.toString() !== userId.toString() && userRole !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                statusCode: 403,
+                message: "You are not authorized to delete this post"
+            });
+        }
+
+     
+        await userService.deletePostById(postId);
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            message: "Post deleted successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+const getLikedPosts = async (req, res) => {
+    try {
+        const userId = req.user?._id;
+
+        if (!userId) {
+            throw new ApiError(401, "Unauthorized access");
+        }
+
+       
+        const likedPosts = await Post.find({
+            likes: userId 
+        })
+        .populate("owner", "fullName profilePic")
+        .populate("comments.user", "fullName profilePic")
+        .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: likedPosts,
+            message: "Liked posts fetched successfully"
+        });
+    } catch (error) {
+        return res.status(error.statusCode || 500).json({ 
+            success: false, 
+            statusCode: error.statusCode || 500,
+            message: error.message || "Internal Server Error" 
+        });
+    }
+};
+
+module.exports = { createPost, getLikedPosts,getAllPosts, toggleLike, addComment, addReply ,deletePost};

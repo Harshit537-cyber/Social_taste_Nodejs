@@ -7,18 +7,37 @@ const sendMessage = async (req, res) => {
         const { receiverId, content, messageType } = req.body;
         const senderId = req.user._id;
 
-        let finalContent = content;
+        const receiver = await User.findById(receiverId);
+        const sender = await User.findById(senderId);
 
+        if (!receiver) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                message: "Receiver not found"
+            });
+        }
+
+        const isBlockedByReceiver = receiver.blockedUsers.includes(senderId);
+        const isBlockedBySender = sender.blockedUsers.includes(receiverId);
+
+        if (isBlockedByReceiver || isBlockedBySender) {
+            return res.status(403).json({
+                success: false,
+                statusCode: 403,
+                message: "Sorry, you can't message right now"
+            });
+        }
+
+        let finalContent = content;
         if (messageType === 'image' || messageType === 'video') {
             if (!req.file) {
                 return res.status(400).json({
                     success: false,
                     statusCode: 400,
-                    data: null,
                     message: "Media file is required"
                 });
             }
-
             const uploadResult = await uploadOnCloudinary(req.file.path);
             finalContent = uploadResult.url;
         }
@@ -36,12 +55,10 @@ const sendMessage = async (req, res) => {
             data: newMessage,
             message: "Message sent"
         });
-
     } catch (error) {
         return res.status(500).json({
             success: false,
             statusCode: 500,
-            data: null,
             message: error.message
         });
     }
@@ -164,7 +181,8 @@ const getOnlineUsers = async (req, res) => {
         const user = await User.findById(userId);
 
         const onlineUsers = await User.find({
-            _id: { $in: user.following },
+            _id: { $in: user.following, $nin: user.blockedUsers },
+            blockedUsers: { $ne: userId },
             isOnline: true
         }, 'fullName profilePic isOnline');
 
@@ -178,7 +196,6 @@ const getOnlineUsers = async (req, res) => {
         return res.status(500).json({
             success: false,
             statusCode: 500,
-            data: null,
             message: error.message
         });
     }
