@@ -73,6 +73,7 @@ const getSuggestions = async (req, res) => {
                 $project: {
                     fullName: 1,
                     profilePic: 1,
+                    role: 1, 
                     mutualFriendsCount: {
                         $size: {
                             $setIntersection: [
@@ -104,7 +105,8 @@ const getSuggestions = async (req, res) => {
 
 const getFollowingList = async (req, res) => {
     try {
-        const user = await User.findById(req.user._id).populate("following", "fullName profilePic email");
+       
+        const user = await User.findById(req.user._id).populate("following", "fullName profilePic email role");
         
         if (!user) {
             return res.status(404).json({
@@ -119,7 +121,7 @@ const getFollowingList = async (req, res) => {
             success: true,
             statusCode: 200,
             data: user.following || [],
-            message: "Friends list fetchedd successfully"
+            message: "Following list fetched successfully"
         });
     } catch (error) {
         return res.status(500).json({
