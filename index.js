@@ -14,14 +14,12 @@ const io = new Server(server, {
     }
 });
 
-const userSocketMap = {}; 
+const userSocketMap = {};
 
 io.on("connection", (socket) => {
     socket.on("join", async (userId) => {
         if (!userId) return;
-        
         userSocketMap[userId] = socket.id;
-        
         await User.findByIdAndUpdate(userId, { isOnline: true });
         io.emit("user_status_update", { userId, isOnline: true });
     });
@@ -33,9 +31,44 @@ io.on("connection", (socket) => {
         }
     });
 
+    socket.on("call_user", ({ to, offer, callerName }) => {
+        const receiverSocketId = userSocketMap[to];
+        if (receiverSocketId) {
+            const callerId = Object.keys(userSocketMap).find(key => userSocketMap[key] === socket.id);
+            io.to(receiverSocketId).emit("incoming_call", { from: callerId, offer, callerName });
+        }
+    });
+
+    socket.on("answer_call", ({ to, answer }) => {
+        const callerSocketId = userSocketMap[to];
+        if (callerSocketId) {
+            io.to(callerSocketId).emit("call_accepted", { answer });
+        }
+    });
+
+    socket.on("ice_candidate", ({ to, candidate }) => {
+        const targetSocketId = userSocketMap[to];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("ice_candidate", { candidate });
+        }
+    });
+
+    socket.on("reject_call", ({ to }) => {
+        const callerSocketId = userSocketMap[to];
+        if (callerSocketId) {
+            io.to(callerSocketId).emit("call_rejected");
+        }
+    });
+
+    socket.on("end_call", ({ to }) => {
+        const targetSocketId = userSocketMap[to];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("call_ended");
+        }
+    });
+
     socket.on("disconnect", async () => {
         const userId = Object.keys(userSocketMap).find(key => userSocketMap[key] === socket.id);
-        
         if (userId) {
             delete userSocketMap[userId];
             await User.findByIdAndUpdate(userId, { isOnline: false });
