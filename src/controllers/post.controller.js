@@ -2,6 +2,7 @@ const { ApiError } = require("../utils/ApiError");
 const userService = require('../services/user.service');
 const { uploadOnCloudinary } = require("../utils/cloudinary");
 const { Post } = require("../models/post.model");
+const User = require('../models/user.model');
 const mongoose = require("mongoose");
 
 const createPost = async (req, res) => {
@@ -44,7 +45,15 @@ const createPost = async (req, res) => {
 const getAllPosts = async (req, res) => {
     try {
         const { category } = req.query;
-        let query = {};
+        const userId = req.user?._id;
+
+        const currentUser = await User.findById(userId);
+        const myBlockedUsers = currentUser?.blockedUsers || [];
+        const usersWhoBlockedMe = await User.find({ blockedUsers: userId }).distinct("_id");
+        
+        const excludeUserIds = [...myBlockedUsers, ...usersWhoBlockedMe];
+
+        let query = { owner: { $nin: excludeUserIds } };
         if (category) query.category = category;
 
         const posts = await Post.find(query)
@@ -178,7 +187,6 @@ const deletePost = async (req, res) => {
             });
         }
 
-    
         if (post.owner.toString() !== userId.toString() && userRole !== 'admin') {
             return res.status(403).json({
                 success: false,
@@ -186,7 +194,6 @@ const deletePost = async (req, res) => {
                 message: "You are not authorized to delete this post"
             });
         }
-
      
         await userService.deletePostById(postId);
 
@@ -207,14 +214,16 @@ const deletePost = async (req, res) => {
 const getLikedPosts = async (req, res) => {
     try {
         const userId = req.user?._id;
+        if (!userId) throw new ApiError(401, "Unauthorized access");
 
-        if (!userId) {
-            throw new ApiError(401, "Unauthorized access");
-        }
+        const currentUser = await User.findById(userId);
+        const myBlockedUsers = currentUser?.blockedUsers || [];
+        const usersWhoBlockedMe = await User.find({ blockedUsers: userId }).distinct("_id");
+        const excludeUserIds = [...myBlockedUsers, ...usersWhoBlockedMe];
 
-       
         const likedPosts = await Post.find({
-            likes: userId 
+            likes: userId,
+            owner: { $nin: excludeUserIds }
         })
         .populate("owner", "fullName profilePic")
         .populate("comments.user", "fullName profilePic")
@@ -235,4 +244,4 @@ const getLikedPosts = async (req, res) => {
     }
 };
 
-module.exports = { createPost, getLikedPosts,getAllPosts, toggleLike, addComment, addReply ,deletePost};
+module.exports = { createPost, getLikedPosts, getAllPosts, toggleLike, addComment, addReply, deletePost };
