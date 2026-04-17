@@ -53,5 +53,6 @@ router.get("/blocked-list", userController.getBlockedUsers);
 
 //Admin-Api
 router.delete("/admin/delete-user/:id", verifyJWT, isAdmin, userController.deleteUser);
+router.get("/admin/block-relationships", verifyJWT, isAdmin, userController.getAllBlockRelationships);
 
 module.exports = router;

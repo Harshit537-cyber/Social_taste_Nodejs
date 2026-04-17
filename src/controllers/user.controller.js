@@ -380,6 +380,39 @@ const toggleBlockUser = async (req, res) => {
 };
 
 
+const getAllBlockRelationships = async (req, res) => {
+    try {
+        const blockRelationships = await User.find({ 
+            blockedUsers: { $exists: true, $not: { $size: 0 } } 
+        })
+        .select("fullName email profilePic blockedUsers")
+        .populate("blockedUsers", "fullName email profilePic");
+
+        if (!blockRelationships || blockRelationships.length === 0) {
+            return res.status(404).json({
+                success: false,
+                statusCode: 404,
+                data: [],
+                message: "No block records found"
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            statusCode: 200,
+            data: blockRelationships,
+            message: "Block relationships fetched successfully"
+        });
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            statusCode: 500,
+            message: error.message || "Internal Server Error"
+        });
+    }
+};
+
+
 const getBlockedUsers = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -413,4 +446,4 @@ const getBlockedUsers = async (req, res) => {
 };
 
 
-module.exports = { registerUser,getBlockedUsers,toggleBlockUser ,loginUser, getAllUsers ,getUserById ,deleteUser,updateProfile};
+module.exports = { registerUser,getAllBlockRelationships,getBlockedUsers,toggleBlockUser ,loginUser, getAllUsers ,getUserById ,deleteUser,updateProfile};
